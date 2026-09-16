@@ -76,10 +76,10 @@
         <ul>
           <li>
             OR (|) - result is <code>1</code> if either or both bits is
-            <code>1</code>, <code>0</code> if both are <code>0</code>
+            <code>1</code>, and <code>0</code> if both are <code>0</code>
           </li>
           <li>
-            AND (&) - result is <code>1</code> if both bits are 1,
+            AND (&) - result is <code>1</code> if both bits are 1, and
             <code>0</code> if either is <code>0</code>
           </li>
           <li>
@@ -87,8 +87,8 @@
             <code>0</code> if was <code>1</code>
           </li>
           <li>
-            XOR (^) - stands for exclusive OR. Result is 1 when the bits
-            differ and 0 when they're the same
+            XOR (^) - stands for exclusive OR. Result is <code>1</code> when the bits
+            differ and <code>0</code> when they're the same
           </li>
           <li>
             Left Shift (&lt;&lt;) - shifts bits to the left by the specified
@@ -104,9 +104,7 @@
       <div id="game-logic">
         <h2>Game Logic</h2>
         <p>
-          For the computer to be able to play against itself and learn, it
-          would need a game environment. This is what we'll be tackling in
-          this section, starting with the game state.
+          This is what we'll be tackling in this section, starting with the game state.
         </p>
 
         <div id="game-state">
@@ -121,11 +119,7 @@
           <p>
             The instinctive way of representing a 2D board game is by using 2D
             arrays to model the rows and columns. This is a good enough
-            approach, but not suitable for this case. The computer will need
-            to play multiple games and perform multiple moves when searching
-            for a best move. Iterating over the 2D array would be rather slow
-            for this and therefore a better approach was warranted. My
-            research online led to
+            approach, but there's a better way through
             <a href="https://3dkingdoms.com/checkers/bitboards.htm" target="_blank">bitboards</a>.
           </p>
 
@@ -137,7 +131,7 @@
             valid squares are considered in the implementation.
           </p>
           <p>
-            There'll be 4 bitboards to hold the pieces, 1 for each piece-kind
+            There'll be 4 bitboards in total to hold the pieces, 1 for each piece-kind
             (1 for black men, 1 for white men, 1 for black kings and 1 for
             white kings). Below is the state of the 4 bitboards at the start
             of the game:
@@ -237,18 +231,16 @@
             Additionally, a random value is also generated for the side key to
             keep track of which side made the move. To compute a position
             hash, first the side key is XORed into hash (only done if side to
-            move is white since BLACK contributes <code>0</code> and XOR-ing
-            on WHITE alone is enough to distinguish the two side-to-move
+            move is white since BLACK contributes <code>0</code>, making XOR-ing
+            on WHITE alone enough to distinguish the two side-to-move
             states). Then for each occupied square, grab the random value that
             was generated at start of the game and XOR them to the hash too.
             The search result for that position is then stored into the
-            transposition table with the computed hash as key. The underlying
-            data structure that the transposition table uses is a vector. So
-            given a hash, the destination index has to be derived.
+            transposition table with the computed hash as key.
           </p>
           <p>
-            To store an entry, the appropriate index has to be derived from
-            the hash. The transposition table has an underlying vector with a
+            To store the hash, its destination index has to be determined.
+            The transposition table has an underlying vector with a
             size (n_entries) rounded up to the nearest power of two by
             <a href="https://en.cppreference.com/cpp/numeric/bit_ceil">std::bit_ceil</a>. A mask is derived by
             subtracting <code>1</code> from n_entries.
@@ -256,8 +248,8 @@
             which gives the appropriate index to use. This trick only works
             for powers of 2 because substracting one from a power of 2 results
             in a binary value with all bits on. Trying this on a
-            non-power-of-2 won't have the same effect. When saving the entry,
-            collision key has to be generated. This is done by right shifting
+            non-power-of-2 won't have the same effect. When saving the entry, a
+            collision key has to be generated too. This is done by right shifting
             the hash by 32 bits, thus discarding the lower 32 bits and leaving
             the upper 32 bits shifted down into the low half. The result is
             then truncated to 32 bits by static_cast&lt;uint32_t&gt;. The
@@ -330,8 +322,8 @@
             sq_bb function to create a bitboard with only the current piece
             populated. If the current piece isn't already a king and has
             reached promo rank, add that move to MoveList if there were any
-            captures with promotion set to true and return since no further
-            jump's available. capture_from then defines a try_jump lambda
+            captures, mark the move as a promotion and return since no further
+            jump's available. capture_from defines a try_jump lambda
             function that aids in finding and executing captures. It does the
             following:
             <span>
