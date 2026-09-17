@@ -62,8 +62,9 @@
           I managed to build.
         </p>
         <p>
-          Reference code can be found on <a href="https://github.com/KevinMwita7/draughts" target="_blank">GitHub</a>,
-          and the <a href="#glossary">glossary</a> section is at the end of this article.
+          Reference code can be found on <a href="https://github.com/KevinMwita7/draughts" target="_blank">GitHub</a>.
+          Would highly recommend taking a look at it first for this to click.
+          The <a href="#glossary">glossary</a> section is at the end of this article.
         </p>
       </div>
 
@@ -114,7 +115,8 @@
             <a href="https://github.com/KevinMwita7/draughts/blob/main/include/draughts/position.h"
               target="_blank">position.h</a>
             and
-            <a href="https://github.com/KevinMwita7/draughts/blob/main/src/position.cpp">position.cpp</a>.
+            <a href="https://github.com/KevinMwita7/draughts/blob/main/src/position.cpp"
+              target="_blank">position.cpp</a>.
           </p>
           <p>
             The instinctive way of representing a 2D board game is by using 2D
@@ -207,7 +209,9 @@
             </li>
           </ul>
           <p>
-            These 4 boards are stored in position.h in the 2D array bb, with
+            These 4 boards are stored in <a
+              href="https://github.com/KevinMwita7/draughts/blob/main/include/draughts/position.h"
+              target="_blank">position.h</a> in the 2D array bb, with
             the rows representing Color and the columns PieceKinds. So bb<code>[0]</code>
             holds black pieces, bb<code>[0][0]</code> black men and bb<code>[0][1]</code>
             black kings. White pieces are bb<code>[1]</code>, white men
@@ -316,7 +320,8 @@
             </li>
           </ul>
           <p>
-            movegen.cpp defines a recursive static capture_from function that
+            <a href="https://github.com/KevinMwita7/draughts/blob/main/src/movegen.cpp" target="_blank">movegen.cpp</a>
+            defines a recursive static capture_from function that
             helps generate captures. It initializes the appropriate promotion
             back rank depending on the piece Color. It then uses the helper
             sq_bb function to create a bitboard with only the current piece
@@ -349,17 +354,17 @@
             and there is a capture.
           </p>
           <p>
-            generate_captures function searches the game for any available
-            captures. It initializes the current player's Color and the enemy,
-            empty and current player's piece bitboards. While there are still
-            men on the current player's bitboard, take next man and generate
-            captures for them using capture_from. It then gets the current
-            player's king bitboard and generates captures for it too.
+            <code>generate_captures</code> function searches the game for any available
+            captures. It gets the current player's Color, the empty squares bitboard,
+            the enemy's piece bitboards and current player's piece bitboards. While
+            there are still men on the current player's bitboard, take next man
+            and generate captures for them using capture_from. It then gets the
+            current player's king bitboard and generates captures for it too.
           </p>
           <p>
-            generate_quiets function looks for moves that don't result in a
-            capture. It first initializes the current player Color and the
-            men, kings, empty squares and promo rank bitboards. It then
+            <code>generate_quiets</code> function looks for moves that don't result in a
+            capture. It first gets the current player Color and its men and
+            kings bitboards, and the empty squares and promo rank bitboards. It then
             declares the FwdFn alias that takes in a bitboard and returns a
             square. Additionally, it declares the emit lambda function that
             populates the MoveList with possible destination squares. If
@@ -385,94 +390,108 @@
             </span>
           </p>
           <p>
-            generate_moves then prioritizes captures if any, else, generate
+            <code>generate_moves</code> then prioritizes captures if any, else, generate
             quiets.
           </p>
           <p>
-            has_legal_moves is used to determine if a Position has any valid
+            <code>has_legal_moves</code> is used to determine if a Position has any valid
             moves. It returns true if there are any valid jumps as determined
             by the helper has_captures function (checks to see if a piece has
             an enemy it can jump over and whether it'll land on a valid square
             if it does). If no jumps exist, it checks whether there any valid
             neighbouring squares it can move to.
           </p>
-          <p>
-            Once a move has been generated, they can then be passed to do_move
-            in Position for execution. To execute the move, the current
-            Color's turn is first determined (the opponent will be the
-            opposite). Then the PieceKind is determined by checking whether
-            it's in the kings bitboard or not. The number of previous moves
-            without a capture is recorded and the captured kings bitboard
-            (useful when updating the zobrist hash) is extracted. The zobrist
-            hash is then updated by XORing the current piece's key into it.
-            Additionally, the zobrist hash is updated with the keys of the
-            captured pieces by looping through the captured pieces bitboards
-            and XORing the keys into the hash. Then, the key of the piece's
-            final destination is XORed in, using KING instead of the original
-            kind if the move was a promotion. Then the current side's turn key
-            is XORed into the zobrist hash. Next comes the board updates. The
-            from square bitboard is ORed with destination square bitboard and
-            the result XORed with the current players bitboard. This removes
-            the piece from the origin square and places it on the target
-            square. Then, the opponent's captured bitboard is NOTed and the
-            result ANDed with their current men bitboard resulting in only the
-            non-captured bitboards remaining on the game. The same is repeated
-            with the opponent's captured bitboard and their current kings
-            bitboard to updated the opponent's kings bitboard. These two
-            operations are safe to perform simultaneously because any given
-            captured square belongs to exactly one of the opponent's two piece
-            bitboards (a square can't simultaneously hold an enemy man and an
-            enemy king). If the piece got promoted, remove it from the piece's
-            bitboard by negating said bitboard and ANDing the result with the
-            men bitboard. OR the sole moving piece bitboard into kings
-            bitboard to update the current player's kings bitboard. The
-            occupied squares bitboard is updated by ORing all the four piece
-            bitboards together (black men | black kings | white men | white
-            kings), and then NOT the result to get the non-occupied squares.
-            The side_to_move is updated to the opponent as its now their turn,
-            the ply incremented and reversible reset if there was captured or
-            incremented if none.
-          </p>
-          <p>
-            Undoing a move is basically the reverse. The current player and
-            the opponent are the opposite of what they were when move was
-            executed. The current PieceKind after move was made is a king if
-            the move was a promotion, else, the it's a king if it's was in the
-            previous side_to_move king bitboard and a man otherwise. The
-            original PieceKind before a move was made is determined to be a
-            man if said move was a promotion, and the current PieceKind if
-            not. The hash is then reversed to state before move was performed
-            by XORing it with the key piece key in destination square
-            (opposite of from square in do_move). Captured pieces bitboard
-            from the move to reverse are retrieved and for each piece in the
-            bitboard, extract it, determine its kind by checking if it's in
-            the captured kings bitboard or not and then XORing the piece with
-            the hash to restore the hash before the piece was captured. Hash
-            is then XORed with the piece's original square and then the
-            SIDE_KEY, resetting it to original state before move. Piece is
-            removed from the king board and placed onto the men's bitboard if
-            the move resulted in promotion. The destination square and from
-            square bitboards are ORed together, resulting in a bitboard with
-            both from and to square populated. This bitboard is then XORed
-            with the mover's bitboard, leading to only the from square
-            persisting in the mover's bitboard. Captured kings bitboard is
-            then ORed with the opponent's kings bitboard, undoing
-            <code>bb[them][KING] &= ~m.captured</code> from do_move, leading
-            to any captured kings being restored. Captured men are obtained by
-            ANDing all captured pieces board with the complement of the
-            captured kings board i.e. captured pieces with kings excluded.
-            Result is then ORed into the opponents board, restoring the
-            original state before capture. Currently occupied squares are
-            constructed by ORing the men and kings bitboard of all Colors.
-            Empty squares will then be result of ~occupied. Side to move is
-            set to previous move's Color, ply decremented and reversible count
-            set to count before move.
-          </p>
+          <div id="do_move">
+            <h4>do_move</h4>
+            <p>
+              Once a move has been generated, they can then be passed to do_move
+              in <a href="https://github.com/KevinMwita7/draughts/blob/main/src/position.cpp"
+                target="_blank">Position</a>
+              for execution.
+              To execute the move, the current
+              Color's turn is first determined (the opponent will be the
+              opposite). Then the PieceKind is determined by checking whether
+              it's in the kings bitboard or not. The number of previous moves
+              without a capture is recorded and the captured kings bitboard
+              (useful when updating the zobrist hash) is extracted. The zobrist
+              hash is then updated by XORing the current piece's key into it.
+              Additionally, the zobrist hash is updated with the keys of the
+              captured pieces by looping through the captured pieces bitboards
+              and XORing the keys into the hash. Then, the key of the piece's
+              final destination is XORed in, using KING instead of the original
+              kind if the move was a promotion. Then the current side's turn key
+              is XORed into the zobrist hash.
+            </p>
+            <p>
+              Next comes the board updates. The
+              from square bitboard is ORed with destination square bitboard and
+              the result XORed with the current players bitboard. This removes
+              the piece from the origin square and places it on the target
+              square. Then, the opponent's captured bitboard is NOTed and the
+              result ANDed with their current men bitboard resulting in only the
+              non-captured bitboards remaining on the game. The same is repeated
+              with the opponent's captured bitboard and their current kings
+              bitboard to updated the opponent's kings bitboard. These two
+              operations are safe to perform simultaneously because any given
+              captured square belongs to exactly one of the opponent's two piece
+              bitboards (a square can't simultaneously hold an enemy man and an
+              enemy king). If the piece got promoted, remove it from the piece's
+              bitboard by negating said bitboard and ANDing the result with the
+              men bitboard. OR the sole moving piece bitboard into kings
+              bitboard to update the current player's kings bitboard. The
+              occupied squares bitboard is updated by ORing all the four piece
+              bitboards together (black men | black kings | white men | white
+              kings), and then NOT the result to get the non-occupied squares.
+              The side_to_move is updated to the opponent as its now their turn,
+              the ply incremented and reversible reset if there was captured or
+              incremented if none.
+            </p>
+          </div>
+          <div id="undo_move">
+            <h4>undo_move</h4>
+            <p>
+              Undoing a move is basically the reverse. The current player and
+              the opponent are the opposite of what they were when move was
+              executed. The current PieceKind after move was made is a king if
+              the move was a promotion, else, it's a king if it's was in the
+              previous side_to_move's king bitboard and a man otherwise. The
+              original PieceKind before a move was made is determined to be a
+              man if said move was a promotion, and the current PieceKind if
+              not. The hash is then reversed to state before move was performed
+              by XORing it with the key piece key in destination square
+              (opposite of from square in do_move). Captured pieces bitboard
+              from the move to reverse are retrieved and for each piece in the
+              bitboard, extract it, determine its kind by checking if it's in
+              the captured kings bitboard or not and then XORing the piece with
+              the hash to restore the hash before the piece was captured. Hash
+              is then XORed with the piece's original square and then the
+              SIDE_KEY, resetting it to original state before move.
+            </p>
+            <p>
+              Piece is removed from the king board and placed onto the men's bitboard if
+              the move had resulted in promotion. The destination square and from
+              square bitboards are ORed together, resulting in a bitboard with
+              both from and to square populated. This bitboard is then XORed
+              with the mover's bitboard, leading to only the from square
+              persisting in the mover's bitboard. Captured kings bitboard is
+              then ORed with the opponent's kings bitboard, undoing
+              <code>bb[them][KING] &= ~m.captured</code> from do_move, leading
+              to any captured kings being restored. Captured men are obtained by
+              ANDing all captured pieces board with the complement of the
+              captured kings board i.e. captured pieces with kings excluded.
+              Result is then ORed into the opponents board, restoring the
+              original state before capture. Currently occupied squares are
+              constructed by ORing the men and kings bitboard of all Colors.
+              Empty squares will then be result of ~occupied. Side to move is
+              set to previous move's Color, ply decremented and reversible count
+              set to count before move.
+            </p>
+          </div>
         </div>
         <div id="notation">
           <h3>Position Notation</h3>
           <p>
-            The game needs a way to record the game state i.e. piece positions
+            The game needs a way to represent the game state i.e. piece positions
             and moves. Enter
             <a href="https://en.wikipedia.org/wiki/Portable_Draughts_Notation" target="_blank">Portable Draughts
               Notation</a>. From the notation, it's possible to know whose turn it is, the
@@ -658,6 +677,10 @@
         </div>
         <div id="search">
           <h3>Best Move</h3>
+          <p>Defined in <a href="https://github.com/KevinMwita7/draughts/blob/main/include/draughts/search.h"
+              target="_blank">search.h</a> and
+            <a href="https://github.com/KevinMwita7/draughts/blob/main/src/search.cpp" target="_blank">search.cpp</a>
+          </p>
           <p>
             To win the game, the engine has to be able to execute the best
             move. The popular algorithm used to find such a move is the
@@ -932,16 +955,16 @@
             </li>
             <li>d - prints the board snapshot.</li>
             <li>
-              any other command falls to final conditional branch, which then
+              any other command is considered moot and falls to final conditional branch, which then
               logs an error.
             </li>
           </ul>
           <p>
-            The game is multithreaded when running a non-browser environment,
+            The game is multithreaded when running in a non-browser environment,
             with the game loop executing in the main thread and the search
             happening in the background thread. Naturally, this comes with the
             concern of race conditions. The first affected area is the out
-            stream because two commands may try to write to the out stream at
+            stream because two commands may try to write to it at
             the same time. To counter this, a mutex is introduced, and the
             writing threads first have to acquire a lock on the mutex before
             writing out. Decided to use
@@ -952,7 +975,9 @@
           <p>
             The second area is signalling the search thread to stop a search.
             It happens a whole lot throughout the code, therefore warranting
-            the creation of the stop_search helper function in protocol.cpp.
+            the creation of the stop_search helper function in <a
+              href="https://github.com/KevinMwita7/draughts/blob/main/src/protocol.cpp"
+              target="_blank">protocol.cpp</a>.
             stop_search first sets the stop_flag_ atomic boolean to true,
             signalling any running search to stop, then joins the search
             thread if it's joinable (not detached/disposed), blocking until
@@ -963,7 +988,7 @@
             command, <br />
             <code>search_thread_ = std::thread(run_search)</code> spins up a
             new thread running the run_search lambda and stores its handle in
-            search_thread_ for these future interactions. For a plain go, that
+            search_thread_ for future interactions. For a plain go, that
             thread is joined immediately and handle_command blocks until
             run_search finishes, so the caller sees bestmove before the next
             command is read. The thread only keeps running past
@@ -986,7 +1011,7 @@
             memory_order_acquire on the search thread. The difference is that
             ponder_switch_ms_ carries a value (the real time budget) that the
             search thread needs to actually use once it observes the switch,
-            not just a true/false signal. Release/acquire guarantees that
+            not just a true/false signal like stop_flag_. Release/acquire guarantees that
             everything written on the main thread before the store,
             pending_go_params_'s real time getting set in this case, is
             visible to the search thread after it does the acquire-load.
@@ -1009,13 +1034,15 @@
             this, the browser is a perfect medium because of HTML's
             simplicity. A C++ program can run in a browser as a
             <a href="https://webassembly.org/" target="_blank">WASM</a>
-            module, making its commands accessible to programs that want to
+            module, making its commands accessible to JavaScript apps that want to
             interface with it. This is where
             <a href="https://emscripten.org/" target="_blank">emscripten</a>
             comes into play. It's what will be used to compile the code into a
-            WASM runtime. Emscripten provides the option of providing a
+            WASM runtime. Emscripten has the <a
+              href="https://emscripten.org/docs/compiling/Deploying-Pages.html#build-files-and-custom-shell"
+              target="_blank">shell-file</a> option that allows one to provide a custom
             <a href="https://emscripten.org/docs/compiling/Deploying-Pages.html" target="_blank">shell HTML</a>
-            file to which the compiled WASM gets outputted. Since the project
+            file to which the compiled WASM will be outputted. Since the project
             uses <a href="https://cmake.org/" target="_blank">CMake</a> as its
             build tool, the shell-file option was passed in the
             <a href="https://cmake.org/cmake/help/latest/command/target_link_options.html"
@@ -1039,7 +1066,7 @@
             instructs emscripten to include
             <a href="https://emscripten.org/docs/porting/connecting_cpp_and_javascript/Interacting-with-code.html#interacting-with-code-ccall-cwrap"
               target="_blank">ccall</a>
-            in the generated glue JS it substitutes at {{{ SCRIPT }}} in
+            in the generated glue JS it substitutes at the {{{ SCRIPT }}} placeholder in
             shell.html, which shall then be used whenever the frontend (visual
             component) wants to communicate with the backend (compiled C++
             code).
@@ -1049,7 +1076,7 @@
             <a href="https://emscripten.org/docs/api_reference/module.html" target="_blank">Module</a>, onto which
             <code>ccall</code> and any other glue properties are
             merged during startup. Additionally, developers can override
-            certain properties of the Module to provide their own behaviour.
+            certain properties of Module to provide their own behaviour.
             The only function overridden in the current program is the
             <a href="https://emscripten.org/docs/getting_started/FAQ.html#how-can-i-tell-when-the-page-is-fully-loaded-and-it-is-safe-to-call-compiled-functions"
               target="_blank">onRuntimeInitialized</a>, a callback summoned by Emscripten when the WASM runtime is
@@ -1078,7 +1105,7 @@
           <ul>
             <li>initialize the zobrist keys.</li>
             <li>
-              create a LinearEval and pass it onto TextProtocol for use when
+              create a <a href="#eval_linear">LinearEval</a> and pass it onto TextProtocol for use when
               searching for moves.
             </li>
             <li>start the engine.</li>
@@ -1122,7 +1149,7 @@ const char* dr_command(const char* line) {
             needs to give the functions a unique name so that the linker can
             differentiate them. This would have led to dr_command being
             compiled to a different name, and ccall wouldn't have been able to
-            find it in the WASM runtime.
+            find it in the WASM runtime, hence <code>extern "C"</code>.
           </p>
           <p>
             The next important piece is the
@@ -1159,7 +1186,7 @@ const char* dr_command(const char* line) {
           </p>
           <ul>
             <li>
-              initialize a TextProtocol with a LinearEval as its evaluator.
+              initialize a TextProtocol with a <a href="#eval_linear">LinearEval</a> as its evaluator.
             </li>
             <li>
               create an
@@ -1197,15 +1224,15 @@ const char* dr_command(const char* line) {
             </li>
             <li>
               Bitboard - an alias of unsigned 32 bit integer. The board will
-              be represented by 32 bits despite a typical bitboard being made
-              up of 64. This is because the implementation only cares about
+              be represented by 32 bits despite a typical draughts board being made
+              up of 64 squares. This is because the implementation only cares about
               the valid squares.
             </li>
             <li>
               SQ_NONE - a sentinel value used to represent invalid/absent
               squares. There are 32 valid squares on the board, with indices
               0-31 (not 1-32 because of zero-based indexing). Therefore 32 is
-              used to represent an invalid square since it's the next value
+              used to represent SQ_NONE since it's the next value
               outside this range.
             </li>
             <li>
@@ -1217,18 +1244,17 @@ const char* dr_command(const char* line) {
               stored would take up 4x the space it currently does.
             </li>
             <li>
-              Color operator~ - the ~ operator has to be overloaded for the
-              enum Color. This because Color is a
-              <a href="https://www.learncpp.com/cpp-tutorial/scoped-enumerations-enum-classes/"
-                target="_blank">scoped</a>
+              Color operator~ - the Bitwise NOT (~) operator has to be overloaded for the
+              enum Color. This is because Color is an
+              <a href="https://www.learncpp.com/cpp-tutorial/unscoped-enumerations//" target="_blank">unscoped</a>
               enum and without this overload, the compiler would cast the
-              value to an int before applying the bitwise not operator. So
-              ~BLACK becomes <code>~static_cast&lt;int&gt;(0)</code> which is
-              <code>-1 (0xFFFFFFFF)</code>, not 1 and ~WHITE would be
+              value to an int before applying the bitwise not operator. Without this overload,
+              ~BLACK would have been <code>~static_cast&lt;int&gt;(0)</code> which is
+              <code>-1 (0xFFFFFFFF)</code>, not <code>1</code> and ~WHITE would be
               <code>-2 (0xFFFFFFFE)</code>. Additionally, unscoped enums don't
               implictly convert from int, so Color opponent = ~side wouldn't
               compile without an explicit cast (the result is an int and would
-              haveve to be cast to an uint8_t before assigning to Color)
+              have to be cast to Color)
             </li>
             <li>
               PieceKind - an enum used to represent the kind of piece with,
@@ -1237,8 +1263,9 @@ const char* dr_command(const char* line) {
               that the piece kind takes up a single byte.
             </li>
             <li>
-              Piece - an enum representing the kinds of pieces; 0 for BLACK
-              man, 1 for BLACK king, 2 for WHITE man, 3 for WHITE king and 4
+              Piece - an enum representing the kinds of pieces; <code>0</code> for BLACK
+              man, <code>1</code> for BLACK king, <code>2</code> for WHITE man, <code>3</code> for WHITE king and
+              <code>4</code>
               as the sentinel value for empty squares.
             </li>
             <li>
@@ -1263,9 +1290,9 @@ const char* dr_command(const char* line) {
               Piece enum.
             </li>
             <li>
-              color_of - returns the color of a piece. It just right shifts
-              the bits by 1, effectively inverting the effect of make_piece.
-              Since make_piece builds a Piece as <br />
+              <code>color_of</code> - returns the color of a piece. It just right shifts
+              the bits by <code>1</code>, effectively inverting the effect of make_piece.
+              Since <code>make_piece</code> builds a Piece as <br />
               <code>(Color &lt;&lt; 1) | PieceKind</code>, the low bit holds
               PieceKind and the upper bit(s) hold Color. Right-shifting by 1
               discards that low PieceKind bit and recovers exactly the Color
@@ -1332,7 +1359,7 @@ const char* dr_command(const char* line) {
             </li>
             <li>
               shift_up_right - moves the pieces on a bitboard to the
-              diagonally upright square. For pieces on even rows, this entails
+              diagonally up right square. For pieces on even rows, this entails
               left shifting the bits by 4 e.g. <br />
               <code>0x0000000F</code> &lt;&lt; 4 = <code>0x000000F0</code>,
               the piece that was originally at square <code>0</code> is now at
@@ -1411,7 +1438,9 @@ const char* dr_command(const char* line) {
           <ul>
             <li>
               extract_features - computes a fixed set of 16 numeric properties
-              of a position (see comments in the header file), always oriented
+              of a position (see comments in the <a
+                href="https://github.com/KevinMwita7/draughts/blob/main/include/draughts/eval_linear.h"
+                target="_blank">header</a> file), always oriented
               from side_to_move's perspective, and writes them into
               <code>out[0..15]</code>.
             </li>
