@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gem Install No OpenSSL</title>
+    <link rel="stylesheet" href="/style.css">
+</head>
+
+<body>
+    <header>
+        <h1><a href="/index.html">Kevin Babu</a></h1>
+        <nav>
+            <a href="/index.html">Home</a>
+            <a href="/blog/index.html">Blog</a>
+            <a href="/projects/index.html">Projects</a>
+        </nav>
+    </header>
+
+    <main>
+        <article>
+            <h1>Gem Install No OpenSSL</h1>
+
+            <p>If you've got OpenSSL installed via Homebrew, or ever ran <code>brew install &lt;package&gt;</code>, this
+                article could be of help. If not, it's most likely you're facing a different issue than I did. Please
+                lookup
+                other troubleshooting articles/quoras online.</p>
+            <div id="tldr">
+                <h2>TLDR;</h2>
+                <p>
+                    Installing ruby via <a href="https://github.com/rbenv/rbenv" target="_blank">rbenv</a> and then
+                    running <code>gem install &lt;package&gt;</code> throws the
+                    error
+                    <code>No OpenSSL found...</code>. In my scenario, this was being caused
+                    by a conflict between the OpenSSL installed by <a href="https://brew.sh/"
+                        target="_blank">Homebrew</a>
+                    and the <a href="https://github.com/rbenv/ruby-build/wiki#ubuntudebianmint">libssl-dev</a> that
+                    <a href="https://github.com/rbenv/ruby-build#readme" target="_blank">ruby-build</a> was trying to
+                    use. Running the command below fixes it:
+                <table class="codebox">
+                    <tbody>
+                        <tr>
+                            <td>
+                                <pre>
+rbenv uninstall 3.3.12
+
+echo 'export RUBY_CONFIGURE_OPTS="--with-openssl-dir=/usr"' >> ~/.bashrc
+
+source ~/.bashrc
+rbenv install -v 3.3.12
+                                    </pre>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+                <p>
+                    It points rbenv to the correct location of the OpenSSL it needs to build ruby, making subsequent
+                    ruby
+                    related commands that need OpenSSL run successfully.
+                </p>
+            </div>
+
+            <div>
+                <h2>Introduction</h2>
+                <p>
+                    Before publishing this blog to <a href="https://docs.github.com/en/pages" target="_blank">GitHub
+                        Pages</a>, I wanted to first see a preview <a
+                        href="https://docs.github.com/en/pages/setting-up-a-github-pages-site-with-jekyll/testing-your-github-pages-site-locally-with-jekyll"
+                        target="_blank">locally</a>. This would require me to run
+                    <a href="https://jekyllrb.com/" target="_blank">Jekkyll</a>, the same tool that GitHub Pages uses.
+                    Therefore, I installed ruby using rbenv and then ran the command
+                    <code><a href="https://guides.rubygems.org/command-reference/#gem-install" target="_blank">gem install</a> jekyll</code>
+                    and that's when I encountered the error
+                    <code>No OpenSSL found...</code>.
+                    This blog covers the steps I took to pinpoint the issue.
+                </p>
+            </div>
+            <div>
+                <h2>The Problem</h2>
+                <p>
+                    rbenv depends on <a href="https://github.com/rbenv/ruby-build#readme" target="_blank">ruby-build</a>
+                    when running the <code>rbenv install</code> command and ruby-build depends on
+                    libssl-dev to build ruby. Running <code>which openssl</code> prints
+                    <code>/home/linuxbrew/.linuxbrew/bin/openssl</code>, so clearly there's OpenSSL installed. Only
+                    problem is, I
+                    couldn't recall running <code>brew install openssl</code> at any point in time.
+                </p>
+                <p>
+                    The initial suspect was Homebrew itself. I theorized that it's <a
+                        href="https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh"
+                        target="_blank">install script</a> might have pulled in OpenSSL as a dependency.
+                    But looking at the script, I couldn't see any proof of this. However, this didn't mean
+                    Homebrew was innocent since <code>which openssl</code> clearly shows it installed OpenSSL
+                    at some point. So I ran <code>brew uses --installed openssl@3</code> which returned pyenv.
+                </p>
+                <img src="pyenv_scooby_doo.jpg" alt="reveal culprit as pyenv" class="centered-img" style="width: 20em;">
+                <p>
+                    Turns out, <code>pyenv</code> <a href="https://formulae.brew.sh/formula/pyenv"
+                        target="_blank">depends on
+                        OpenSSL</a>, and therefore, OpenSSL got pulled in by Homebrew during <code>pyenv's</code>
+                    installation.
+                </p>
+                <p>But that still doesn't explain why Linuxbrew's OpenSSL keeps getting resolved instead of
+                    libssl-dev. So I checked, Homebrew's <a
+                        href="https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh"
+                        target="_blank">installation script</a> and that's when I noticed the following block:</p>
+                <table class="codebox">
+                    <tbody>
+                        <tr>
+                            <td>
+                                <pre>
+if grep -qs "eval \"\$(${HOMEBREW_PREFIX}/bin/brew shellenv[^\"]*)\"" "${shell_rcfile}"
+then
+  if ! [[ -x "$(command -v brew)" ]]
+  then
+    cat &lt;&lt;EOS
+- Run this command in your terminal to add Homebrew to your ${tty_bold}PATH${tty_reset}:
+    eval "\$(${HOMEBREW_PREFIX}/bin/brew shellenv${shellenv_suffix})"
+EOS
+  fi
+else
+  cat &lt;&lt;EOS
+- Run these commands in your terminal to add Homebrew to your ${tty_bold}PATH${tty_reset}:
+    echo >> ${shell_rcfile}
+    echo 'eval "\$(${HOMEBREW_PREFIX}/bin/brew shellenv${shellenv_suffix})"' >> ${shell_rcfile}
+    eval "\$(${HOMEBREW_PREFIX}/bin/brew shellenv${shellenv_suffix})"
+EOS
+fi
+                                </pre>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+                <p>
+                    The block basically checks if the command
+                    <code>eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"</code>
+                    is present in the <code>bashrc</code> file and if not, instructs the user on how to add it. Once
+                    the user abides and adds the command, it'll run on each terminal window open and prepend
+                    <code>/home/linuxbrew/.linuxbrew/bin</code> to PATH. That makes <code>pkg-config</code> resolve to
+                    brew's own
+                    build of <code>pkg-config</code> and not the system's. Run <code>which pkg-config</code> and it
+                    prints
+                    <code>/home/linuxbrew/.linuxbrew/bin/pkg-config</code>.
+                </p>
+                <p>
+                    Therefore, during ruby's installation, the <code>rbenv install</code> command ended up using
+                    Linuxbrew's
+                    <code>pkg-config</code>, which resolves the OpenSSL installed by <code>brew install pyenv</code>.
+                    Consequently, it
+                    never reaches <code>/usr/lib/x86_64-linux-gnu/pkgconfig/openssl.pc</code>, the one
+                    <code>libssl-dev</code>
+                    installed. Instead of failing loudly, <code>rbenv install</code> skips the OpenSSL step, and
+                    installation completes.
+                    However, unbeknownst to you, <code>gem install</code> is broken and will spout
+                    <code>No OpenSSL found</code> whenever summoned.
+                </p>
+            </div>
+            <div>
+                <h2>The Solutions</h2>
+                <p>There exists a temporary fix which works on the current ruby installation, meaning if
+                    <code>rbenv install</code> was ever
+                    ran
+                    again, the error would resurface. Its shown below:
+                </p>
+                <table class="codebox">
+                    <tbody>
+                        <tr>
+                            <td>
+                                <pre class="codebox">
+rbenv uninstall 3.3.12
+
+PATH=$(echo "$PATH" | tr ':' '\n' | grep -v linuxbrew | paste -sd: -) \
+  rbenv install -v 3.3.12
+</pre>
+                                </p>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+                <p>
+                    The command that precedes
+                    <code><a href="https://github.com/rbenv/rbenv#installing-ruby-versions" target="_blank">rbenv install</a></code>
+                    removes brew entries out of PATH for this single run,
+                    leading to <a href="https://github.com/rbenv/rbenv">rbenv</a> using the correct OpenSSL
+                    dependency (one installed via apt-get), thus fixing subsequent
+                    <code><a href="https://guides.rubygems.org/command-reference/#gem-install" target="_blank">gem install</a></code>.
+                </p>
+                <p>And a more permanent fix which involves setting <code>RUBY_CONFIGURE_OPTS</code>:
+                </p>
+                <table class="codebox">
+                    <tbody>
+                        <tr>
+                            <td>
+                                <pre>
+rbenv uninstall 3.3.12
+
+echo 'export RUBY_CONFIGURE_OPTS="--with-openssl-dir=/usr"' >> ~/.bashrc
+
+source ~/.bashrc
+rbenv install -v 3.3.12
+                                </pre>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+                <p>
+                    This bypasses <code>pkg-config</code> detection for OpenSSL entirely and points straight at
+                    <code>/usr/include/openssl</code>
+                    and /usr/lib/x86_64-linux-gnu, regardless of what Linuxbrew has on PATH or in its
+                    <code>pkg-config</code> search
+                    order.
+                </p>
+                <p>
+                    Now if you run <code>ruby -ropenssl -e "puts OpenSSL::OPENSSL_VERSION"</code>, it should print the
+                    OpenSSL version:
+                </p>
+                <table class="codebox">
+                    <tbody>
+                        <tr>
+                            <td>
+                                <pre>
+OpenSSL 3.0.13 30 Jan 2024
+                                </pre>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </article>
+    </main>
+</body>
+
+</html>
